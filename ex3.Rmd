@@ -1,0 +1,62 @@
+---
+title: "ex3"
+output: html_document
+date: "2023-05-03"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(reshape2)
+library(plotly)
+library(caret)
+library(readr)
+library(ggplot2)
+library(tidyr)
+library(forcats)
+library(partykit)
+library(randomForest)
+library(pdp)
+library(ggpubr)
+```
+
+# Exercise 5.- Model-agnostic: Partial Dependency Plot (PDP).
+
+
+## 3.- PDP to explain the price of a house.
+
+EXERCISE:
+Apply the previous concepts to predict the price of a house from the database kc_house_data.csv. In this case, use again a random forest approximation for the prediction based on the features bedrooms, bathrooms, sqft_living, sqft_lot, floors and yr_built. 
+
+```{r}
+house <- read.csv2("kc_house_data.csv", header = T,  sep = ",")
+
+house$price <- as.numeric(house$price)
+house$bedrooms <- as.numeric(house$bedrooms)
+house$bathrooms <- as.numeric(house$bathrooms)
+house$sqft_living <- as.numeric(house$sqft_living)
+house$sqft_lot <- as.numeric(house$sqft_lot)
+house$floors <- as.numeric(house$floors)
+house$yr_built <- as.numeric(house$yr_built)
+rf <- randomForest( data = house, price~ bedrooms+ bathrooms+sqft_living+ sqft_lot+floors+yr_built, ntrees = 500)
+```
+
+```{r}
+set.seed(40)
+random.length  <-  sample(x = 1000:1000, size = 1)
+subset_house <- house[sample(nrow(house), 100), ]
+
+pdp.br <-partial(rf, pred.var = c("bedrooms"), chull = TRUE)
+plot.br <- autoplot(pdp.br, contour = TRUE) +ylim(500000,1000000) + ylab('Predicted price')
+pdp.bt <-partial(rf, pred.var = c("bathrooms"), chull = TRUE)
+plot.bt <- autoplot(pdp.bt, contour = TRUE)+ylim(500000,1000000)
+pdp.sl <-partial(rf, pred.var = c("sqft_living"), chull = TRUE)
+plot.sl <- autoplot(pdp.sl, contour = TRUE)+ylim(500000,1000000)+ ylab('Predicted price')
+pdp.floors <-partial(rf, pred.var = c("floors"), chull = TRUE)
+plot.floors <- autoplot(pdp.floors, contour = TRUE)+ylim(500000,1000000)
+
+ggarrange(plot.br, plot.bt, plot.sl, plot.floors, nrow = 2, ncol = 2) 
+```
+
+QUESTION:
+Analyse the influence of bedrooms, bathrooms, sqft_living and floors on the predicted price.
