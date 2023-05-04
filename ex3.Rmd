@@ -44,41 +44,59 @@ house$yr_built <- as.numeric(house$yr_built)
 rf <- randomForest(data = house, price ~ bedrooms + bathrooms + sqft_living +
                     sqft_lot + floors + yr_built, ntrees = 500)
 
-
-
 ```
 
 
 ```{r}
 set.seed(40)
 
-
 subset_house <- house[sample(nrow(house), 100), ]
-
+pdf("plot4.pdf")
 par(mfrow = c(2, 2))
 
 partialPlot(rf, pred.data = subset_house,
-                 x.var = c("bedrooms"), plot = TRUE) +
-                    ylab("Predicted price")
-
-
-
-partialPlot(rf, pred.data = subset_house,
-                  x.var = c("bathrooms"), plot = TRUE) +
-                    ylab("Predicted price")
-
+            x.var = c("bedrooms"), plot = TRUE, ylab = "Predicted price",
+            xlab = "Bedrooms", main = "Partial Dependence on bedrooms",
+            ylim = c(500000, 1000000), yaxt = "n")
+axis(2, at = c(500000,600000,700000,800000, 900000, 1000000),
+            labels = c("500k", "600k", "700k", "800k", "900k", "1M"))
 
 partialPlot(rf, pred.data = subset_house,
-                 x.var = c("sqft_living"), plot = TRUE) +
-                    ylab("Predicted price")
-
+            x.var = c("bathrooms"), plot = TRUE, ylab = "Predicted price",
+            xlab = "Bathrooms", main = "Partial Dependence on bathrooms",
+            ylim = c(500000, 1000000), yaxt = "n")
+axis(2, at = c(500000,600000,700000,800000, 900000, 1000000),
+            labels = c("500k", "600k", "700k", "800k", "900k", "1M"))
 
 partialPlot(rf, pred.data = subset_house,
-                    x.var = c("floors"), plot = TRUE) +
-                    ylab("Predicted price")
+            x.var = c("sqft_living"), plot = TRUE, ylab = "Predicted price",
+            xlab = "Sqft Living", main = "Partial Dependence on sqft_living",
+            ylim = c(500000, 1000000), yaxt = "n")
+axis(2, at = c(500000,600000,700000,800000, 900000, 1000000),
+            labels = c("500k", "600k", "700k", "800k", "900k", "1M"))
+
+partialPlot(rf, pred.data = subset_house,
+            x.var = c("floors"), plot = TRUE, ylab = "Predicted price",
+            xlab = "Floors", main = "Partial Dependence on floors",
+            ylim = c(500000, 1000000), yaxt = "n")
+axis(2, at = c(500000,600000,700000,800000, 900000, 1000000),
+            labels = c("500k", "600k", "700k", "800k", "900k", "1M"))
+
+dev.off()
 ```
 
 QUESTION:
 Analyse the influence of bedrooms, bathrooms, sqft_living and floors on the predicted price.
 
 
+
+```{r}
+
+par(mfrow=c(1,1))
+partialPlot(rf, pred.data = subset_house,
+            x.var = c("sqft_living"), plot = TRUE, ylab = "Predicted price",
+            xlab = "Sqft Living", main = "Partial Dependence on sqft_living",
+            ylim = c(500000, 1000000), yaxt = "n")
+axis(2, at = c(500000,600000,700000,800000, 900000, 1000000),
+            labels = c("500k", "600k", "700k", "800k", "900k", "1M"))
+````
