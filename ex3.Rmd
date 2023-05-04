@@ -22,7 +22,6 @@ library(ggpubr)
 
 # Exercise 5.- Model-agnostic: Partial Dependency Plot (PDP).
 
-
 ## 3.- PDP to explain the price of a house.
 
 EXERCISE:
@@ -88,15 +87,20 @@ dev.off()
 QUESTION:
 Analyse the influence of bedrooms, bathrooms, sqft_living and floors on the predicted price.
 
+In order to obtain the plots, we decide to make them in the same scale,
+in order to do a better analysis.
+As we can see, the characteristic of the house with major influence is the sqft_living. We can
+say that more sqft_living indicates major prices and viceversa. 
+However, the number of bathrooms in the house is also an important characteristic
+to take into account when talking about prices. A house with 3.5 to 4.5 bathrooms is significantly
+more expensive than a house with 1 to 3 bathrooms.
+In the other hand, it seems that the number of bedrooms or the number of floors do not increase or decrease
+the price as much as the other characteristics. If we have 2 to 4 bedrooms, the price is slighlty higher than if we have 4 to 6 bedrooms, while
+if we talk about floors, having 1 to 2 is cheaper than 2 to 3.
+
+To sum up, the number of bedrooms and floors are the characteristics with less influence in the price of the house (the
+range of variation is from 500k to 600k for the first one and 500k to 680k for the second),
+while the sqft_living and number of bathrooms are the ones which contribute more to the final price (the first ranges between 500k and 1M and 
+the second from 500k to 750k).
 
 
-```{r}
-
-par(mfrow=c(1,1))
-partialPlot(rf, pred.data = subset_house,
-            x.var = c("sqft_living"), plot = TRUE, ylab = "Predicted price",
-            xlab = "Sqft Living", main = "Partial Dependence on sqft_living",
-            ylim = c(500000, 1000000), yaxt = "n")
-axis(2, at = c(500000,600000,700000,800000, 900000, 1000000),
-            labels = c("500k", "600k", "700k", "800k", "900k", "1M"))
-````
