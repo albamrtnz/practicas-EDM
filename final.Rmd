@@ -1,0 +1,196 @@
+
+---
+title: 'Deployment: Model-agnostic methods'
+author: "Aina Magraner Rincón and Alba Martínez López"
+always_allow_html: true
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(reshape2)
+library(plotly)
+library(caret)
+library(readr)
+library(ggplot2)
+library(tidyr)
+library(forcats)
+library(partykit)
+library(randomForest)
+library(pdp)
+library(ggpubr)
+```
+
+
+```{r include=FALSE}
+day <- read.csv2("~/Desktop/repos/local-EDM/practicas-EDM/csv/day.csv", header = TRUE,  sep = ",")
+data1 <- day['season']
+data1$season <- as.factor(data1$season)
+dummy <- dummyVars(" ~ .", data=data1)
+newdata <- data.frame(predict(dummy, newdata = data1))
+data2 <- cbind(day, newdata)
+
+apply <- function(x) {
+  ifelse(x == 2, 1, 0)
+}
+data2$MISTY = apply(data2$weathersit)
+
+apply2 <- function(x) {
+  ifelse(x == 3 | x == 4, 1, 0)
+}
+
+data2$RAIN <- apply2(data2$weathersit)
+
+denorm <- function(x, mini, maxi){
+  x <- x*(maxi-mini)+mini
+}
+
+data2$temp <- as.numeric(data2$temp)
+data2$hum <- as.numeric(data2$hum)
+data2$windspeed <- as.numeric(data2$windspeed)
+
+data2$temp <- denorm(data2$temp, -8, 39)
+data2$hum <- data2$hum*100
+data2$windspeed <- data2$windspeed*67
+
+data2$dteday <- as.Date(data2$dteday, format='%Y-%m-%d')
+
+data2$days_since_2011 <- as.integer(data2$dteday - as.Date('2011-01-01',format='%Y-%m-%d'))
+```
+
+
+# Exercise 5.- Model-agnostic: Partial Dependency Plot (PDP).
+
+## 1.- One dimensional Partial Dependence Plot.
+
+**Ex1:**: Apply PDP to the regression example of predicting bike rentals. Fit a random forest approximation for the prediction of bike rentals (cnt). Use the partial dependence plot to visualize the relationships the model learned. Use the slides shown in class as model.  
+
+
+```{r echo = FALSE}
+#pdf("ex1_resul.pdf")
+
+rf <- randomForest( data = data2, cnt~. , ntrees = 500)
+pdp.days <-partial(rf, pred.var = c("days_since_2011"), chull = TRUE)
+plot.days <- autoplot(pdp.days, contour = TRUE) + ylim(3000,5000)+ ylab('Predicted number of bikes')
+pdp.temp <-partial(rf, pred.var = c("temp"), chull = TRUE)
+plot.temp <- autoplot(pdp.temp, contour = TRUE) + ylab('') + ylim(3000,5000)
+pdp.hum <-partial(rf, pred.var = c("hum"), chull = TRUE)
+plot.hum <- autoplot(pdp.hum, contour = TRUE) + ylab('Predicted number of bikes') + ylim(3000,5000)
+pdp.ws <-partial(rf, pred.var = c("windspeed"), chull = TRUE)
+plot.ws <- autoplot(pdp.ws, contour = TRUE) + ylab('') + ylim(3000,5000)
+ggarrange(plot.days, plot.temp, plot.hum, plot.ws, nrow = 2, ncol = 2)
+
+#dev.off()
+```
+
+**Question 1:** Analyse the influence of days since 2011, temperature, humidity and wind speed on the predicted bike counts.
+
+The influence of the variable `days_since_2011` has 3 different levels. Firstly, when the variable is lower than 100, the number of bikes is around 4250, once the variable getst
+
+## 2.- Bidimensionl Partial Dependency Plot
+
+**Ex2:** Generate a 2D Partial Dependency Plot with humidity and temperature to predict the number of bikes rented depending on those parameters.
+
+```{r echo = FALSE}
+set.seed(56)
+#pdf("ex2_resul.pdf")
+random.length  <-  sample(x = 200:500, size = 1)
+subset <- data2[sample(nrow(data2), random.length), ]
+
+rf <- randomForest(data = subset, cnt~. , ntrees = 500)
+
+bi_pdp <- pdp::partial(rf, pred.var =c("temp",'hum'), train = subset)
+
+p <- ggplot(bi_pdp, aes(x = temp, y = hum))+geom_tile(aes(fill= yhat))
+p 
+#dev.off()
+```
+
+**Question 2:** Interpret the results.
+
+The following graph comes to show how the effect that the humidity has over the number of rented bikes is not comparable to the one that the temperature has, meaning that we clearly see a significant change in the number of bikes when changing temperature, this change most significant when the temperature goes from 13 to 15. Whereas there is no significant increase or decrease in the rented bikes has the humidity is higher or lower.
+
+
+## 3.- PDP to explain the price of a house.
+
+**Ex3:** Apply the previous concepts to predict the price of a house from the database kc_house_data.csv. In this case, use again a random forest approximation for the prediction based on the features bedrooms, bathrooms, sqft_living, sqft_lot, floors and yr_built. 
+
+```{r include=FALSE}
+house <- read.csv2("~/Desktop/repos/local-EDM/practicas-EDM/csv/kc_house_data.csv", header = TRUE,  sep = ",")
+
+set.seed(40)
+
+house$price <- as.numeric(house$price)
+house$bedrooms <- as.numeric(house$bedrooms)
+house$bathrooms <- as.numeric(house$bathrooms)
+house$sqft_living <- as.numeric(house$sqft_living)
+house$sqft_lot <- as.numeric(house$sqft_lot)
+house$floors <- as.numeric(house$floors)
+house$yr_built <- as.numeric(house$yr_built)
+
+rf <- randomForest(data = house, price ~ bedrooms + bathrooms + sqft_living +
+                    sqft_lot + floors + yr_built, ntrees = 500)
+
+```
+
+
+```{r echo=FALSE}
+set.seed(40)
+
+subset_house <- house[sample(nrow(house), 100), ]
+
+#pdf("ex4_resul.pdf")
+
+par(mfrow = c(2, 2))
+
+partialPlot(rf, pred.data = subset_house,
+            x.var = c("bedrooms"), plot = TRUE, ylab = "Predicted price",
+            xlab = "Bedrooms", main = "Partial Dependence on bedrooms",
+            ylim = c(500000, 1000000), yaxt = "n")
+axis(2, at = c(500000,600000,700000,800000, 900000, 1000000),
+            labels = c("500k", "600k", "700k", "800k", "900k", "1M"))
+
+partialPlot(rf, pred.data = subset_house,
+            x.var = c("bathrooms"), plot = TRUE, ylab = "Predicted price",
+            xlab = "Bathrooms", main = "Partial Dependence on bathrooms",
+            ylim = c(500000, 1000000), yaxt = "n")
+axis(2, at = c(500000,600000,700000,800000, 900000, 1000000),
+            labels = c("500k", "600k", "700k", "800k", "900k", "1M"))
+
+partialPlot(rf, pred.data = subset_house,
+            x.var = c("sqft_living"), plot = TRUE, ylab = "Predicted price",
+            xlab = "Sqft Living", main = "Partial Dependence on sqft_living",
+            ylim = c(500000, 1000000), yaxt = "n")
+axis(2, at = c(500000,600000,700000,800000, 900000, 1000000),
+            labels = c("500k", "600k", "700k", "800k", "900k", "1M"))
+
+partialPlot(rf, pred.data = subset_house,
+            x.var = c("floors"), plot = TRUE, ylab = "Predicted price",
+            xlab = "Floors", main = "Partial Dependence on floors",
+            ylim = c(500000, 1000000), yaxt = "n")
+axis(2, at = c(500000,600000,700000,800000, 900000, 1000000),
+            labels = c("500k", "600k", "700k", "800k", "900k", "1M"))
+
+#dev.off()
+```
+
+**Question 3:** Analyse the influence of bedrooms, bathrooms, sqft_living and floors on the predicted price.
+
+In order to obtain the plots, we decide to make them in the same scale,
+in order to do a better analysis.
+As we can see, the characteristic of the house with major influence is the sqft_living. We can
+say that more sqft_living indicates major prices and viceversa. 
+However, the number of bathrooms in the house is also an important characteristic
+to take into account when talking about prices. A house with 3.5 to 4.5 bathrooms is significantly
+more expensive than a house with 1 to 3 bathrooms.
+In the other hand, it seems that the number of bedrooms or the number of floors do not increase or decrease
+the price as much as the other characteristics. If we have 2 to 4 bedrooms, the price is slighlty higher than if we have 4 to 6 bedrooms, while
+if we talk about floors, having 1 to 2 is cheaper than 2 to 3.
+
+To sum up, the number of bedrooms and floors are the characteristics with less influence in the price of the house (the
+range of variation is from 500k to 600k for the first one and 500k to 680k for the second),
+while the sqft_living and number of bathrooms are the ones which contribute more to the final price (the first ranges between 500k and 1M and 
+the second from 500k to 750k).
