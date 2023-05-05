@@ -1,0 +1,61 @@
+---
+title: "data_prep"
+output: html_document
+date: "2023-05-03"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(reshape2)
+library(plotly)
+library(caret)
+library(readr)
+library(ggplot2)
+library(tidyr)
+library(forcats)
+library(partykit)
+library(randomForest)
+library(pdp)
+library(ggpubr)
+```
+
+```{r}
+day <- read.csv2("day.csv", header = T,  sep = ",")
+data1 <- day['season']
+data1$season <- as.factor(data1$season)
+dummy <- dummyVars(" ~ .", data=data1)
+newdata <- data.frame(predict(dummy, newdata = data1))
+data2 <- cbind(day, newdata)
+
+apply <- function(x) {
+  ifelse(x == 2, 1, 0)
+}
+data2$MISTY = apply(data2$weathersit)
+
+apply2 <- function(x) {
+  ifelse(x == 3 | x == 4, 1, 0)
+}
+
+data2$RAIN <- apply2(data2$weathersit)
+
+denorm <- function(x, mini, maxi){
+  x <- x*(maxi-mini)+mini
+}
+
+data2$temp <- as.numeric(data2$temp)
+data2$hum <- as.numeric(data2$hum)
+data2$windspeed <- as.numeric(data2$windspeed)
+
+data2$temp <- denorm(data2$temp, -8, 39)
+data2$hum <- data2$hum*100
+data2$windspeed <- data2$windspeed*67
+
+data2$dteday <- as.Date(data2$dteday, format='%Y-%m-%d')
+
+data2$days_since_2011 <- as.integer(data2$dteday - as.Date('2011-01-01',format='%Y-%m-%d'))
+
+```
+
+
+

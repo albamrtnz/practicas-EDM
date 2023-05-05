@@ -1,0 +1,106 @@
+---
+title: "ex3"
+output: html_document
+date: "2023-05-03"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(reshape2)
+library(plotly)
+library(caret)
+library(readr)
+library(ggplot2)
+library(tidyr)
+library(forcats)
+library(partykit)
+library(randomForest)
+library(pdp)
+library(ggpubr)
+```
+
+# Exercise 5.- Model-agnostic: Partial Dependency Plot (PDP).
+
+## 3.- PDP to explain the price of a house.
+
+EXERCISE:
+Apply the previous concepts to predict the price of a house from the database kc_house_data.csv. In this case, use again a random forest approximation for the prediction based on the features bedrooms, bathrooms, sqft_living, sqft_lot, floors and yr_built. 
+
+```{r}
+house <- read.csv2("kc_house_data.csv", header = TRUE,  sep = ",")
+
+set.seed(40)
+
+house$price <- as.numeric(house$price)
+house$bedrooms <- as.numeric(house$bedrooms)
+house$bathrooms <- as.numeric(house$bathrooms)
+house$sqft_living <- as.numeric(house$sqft_living)
+house$sqft_lot <- as.numeric(house$sqft_lot)
+house$floors <- as.numeric(house$floors)
+house$yr_built <- as.numeric(house$yr_built)
+
+rf <- randomForest(data = house, price ~ bedrooms + bathrooms + sqft_living +
+                    sqft_lot + floors + yr_built, ntrees = 500)
+
+```
+
+
+```{r}
+set.seed(40)
+
+subset_house <- house[sample(nrow(house), 100), ]
+pdf("plot4.pdf")
+par(mfrow = c(2, 2))
+
+partialPlot(rf, pred.data = subset_house,
+            x.var = c("bedrooms"), plot = TRUE, ylab = "Predicted price",
+            xlab = "Bedrooms", main = "Partial Dependence on bedrooms",
+            ylim = c(500000, 1000000), yaxt = "n")
+axis(2, at = c(500000,600000,700000,800000, 900000, 1000000),
+            labels = c("500k", "600k", "700k", "800k", "900k", "1M"))
+
+partialPlot(rf, pred.data = subset_house,
+            x.var = c("bathrooms"), plot = TRUE, ylab = "Predicted price",
+            xlab = "Bathrooms", main = "Partial Dependence on bathrooms",
+            ylim = c(500000, 1000000), yaxt = "n")
+axis(2, at = c(500000,600000,700000,800000, 900000, 1000000),
+            labels = c("500k", "600k", "700k", "800k", "900k", "1M"))
+
+partialPlot(rf, pred.data = subset_house,
+            x.var = c("sqft_living"), plot = TRUE, ylab = "Predicted price",
+            xlab = "Sqft Living", main = "Partial Dependence on sqft_living",
+            ylim = c(500000, 1000000), yaxt = "n")
+axis(2, at = c(500000,600000,700000,800000, 900000, 1000000),
+            labels = c("500k", "600k", "700k", "800k", "900k", "1M"))
+
+partialPlot(rf, pred.data = subset_house,
+            x.var = c("floors"), plot = TRUE, ylab = "Predicted price",
+            xlab = "Floors", main = "Partial Dependence on floors",
+            ylim = c(500000, 1000000), yaxt = "n")
+axis(2, at = c(500000,600000,700000,800000, 900000, 1000000),
+            labels = c("500k", "600k", "700k", "800k", "900k", "1M"))
+
+dev.off()
+```
+
+QUESTION:
+Analyse the influence of bedrooms, bathrooms, sqft_living and floors on the predicted price.
+
+In order to obtain the plots, we decide to make them in the same scale,
+in order to do a better analysis.
+As we can see, the characteristic of the house with major influence is the sqft_living. We can
+say that more sqft_living indicates major prices and viceversa. 
+However, the number of bathrooms in the house is also an important characteristic
+to take into account when talking about prices. A house with 3.5 to 4.5 bathrooms is significantly
+more expensive than a house with 1 to 3 bathrooms.
+In the other hand, it seems that the number of bedrooms or the number of floors do not increase or decrease
+the price as much as the other characteristics. If we have 2 to 4 bedrooms, the price is slighlty higher than if we have 4 to 6 bedrooms, while
+if we talk about floors, having 1 to 2 is cheaper than 2 to 3.
+
+To sum up, the number of bedrooms and floors are the characteristics with less influence in the price of the house (the
+range of variation is from 500k to 600k for the first one and 500k to 680k for the second),
+while the sqft_living and number of bathrooms are the ones which contribute more to the final price (the first ranges between 500k and 1M and 
+the second from 500k to 750k).
+
+
